@@ -75,7 +75,7 @@ func repository(norek string) (ResponseModel, error) {
 		return saldo, err
 	}
 	defer db.Close()
-	sqlStatement := "SELECT norek, saldo FROM tbl_rekening WHERE norek = $1 LIMIT 1;"
+	sqlStatement := "SELECT norek, saldo FROM tbl_rekening WHERE norek = $1 ORDER BY created_date DESC LIMIT 1;"
 	errExec := db.QueryRow(sqlStatement, norek).Scan(&saldo.Norek, &saldo.Saldo)
 	if errExec != nil {
 		//log.Fatalf("error when execute : %s", errExec)

@@ -16,10 +16,10 @@ create table IF NOT EXISTS tbl_topup(
 );
 
 create table IF NOT EXISTS tbl_rekening(
-    norek varchar(4) PRIMARY KEY,
+    id varchar(11) PRIMARY KEY,
+    norek varchar(4),
     saldo NUMERIC,
-    created_date TIMESTAMP,
-    updated_date TIMESTAMP
+    created_date TIMESTAMP
 );
 
 create table IF NOT EXISTS tbl_transaksi(
@@ -37,34 +37,34 @@ CREATE OR REPLACE PROCEDURE sp_customer_topup(
 	Pnorek VARCHAR(4)
 )
 AS $$
+	DECLARE vLast numeric = (SELECT saldo FROM tbl_rekening WHERE norek = Pnorek order by created_date desc LIMIT 1);
 BEGIN
-	IF EXISTS (SELECT * FROM tbl_rekening WHERE norek = Pnorek ) THEN
-		UPDATE tbl_rekening
-		SET saldo = saldo + Pgram, updated_date = CURRENT_TIMESTAMP
-		WHERE norek = Pnorek;
-	ELSE
-		INSERT INTO tbl_rekening VALUES
-		(Pnorek, Pgram, CURRENT_TIMESTAMP);
-	END IF;
+    IF EXISTS (SELECT saldo FROM tbl_rekening WHERE norek = Pnorek order by created_date desc LIMIT 1) THEN
+        INSERT INTO tbl_rekening VALUES
+        (Pid, Pnorek, Pgram + vLast, CURRENT_TIMESTAMP);
+    ELSE
+        INSERT INTO tbl_rekening VALUES
+        (Pid, Pnorek, Pgram, CURRENT_TIMESTAMP);
+    END IF;
 	
 	INSERT INTO tbl_topup VALUES
 	(Pid,Pgram,Pharga,Pnorek,CURRENT_TIMESTAMP);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE sp_buyback(
-	Pid VARCHAR(11),
-	Pgram NUMERIC,
-	Pharga NUMERIC,
-	Pnorek VARCHAR(4)
-)
-AS $$
-BEGIN
-    UPDATE tbl_rekening
-    SET saldo = saldo - Pgram, updated_date = CURRENT_TIMESTAMP
-    WHERE norek = Pnorek;
+-- CREATE OR REPLACE PROCEDURE sp_buyback(
+-- 	Pid VARCHAR(11),
+-- 	Pgram NUMERIC,
+-- 	Pharga NUMERIC,
+-- 	Pnorek VARCHAR(4)
+-- )
+-- AS $$
+-- BEGIN
+--     UPDATE tbl_rekening
+--     SET saldo = saldo - Pgram, updated_date = CURRENT_TIMESTAMP
+--     WHERE norek = Pnorek;
 	
-	INSERT INTO tbl_transaksi VALUES
-	(Pid,Pgram,Pharga,Pnorek,CURRENT_TIMESTAMP);
-END;
-$$ LANGUAGE plpgsql;
+-- 	INSERT INTO tbl_transaksi VALUES
+-- 	(Pid,Pgram,Pharga,Pnorek,CURRENT_TIMESTAMP);
+-- END;
+-- $$ LANGUAGE plpgsql;
