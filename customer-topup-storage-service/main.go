@@ -13,10 +13,10 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type InputHargaEmas struct {
-	Admin_id      string  `json:"admin_id,omitempty"`
-	Harga_topup   float64 `json:"harga_topup"`
-	Harga_buyback float64 `json:"harga_buyback"`
+type TopupModel struct {
+	Gram  float64 `json:"gram"`
+	Harga float64 `json:"harga"`
+	Norek string  `json:"norek"`
 }
 
 func main() {
@@ -49,18 +49,19 @@ func main() {
 }
 
 func controller(mes kafka.Message) {
-	var input InputHargaEmas
+	var topupData TopupModel
 
-	err := json.Unmarshal([]byte(mes.Value), &input)
+	err := json.Unmarshal([]byte(mes.Value), &topupData)
 	if err != nil {
 		log.Fatal("error when unmarshal:", err)
 	}
 	fmt.Print("struct after : ")
-	fmt.Println(input)
-	repository(string(mes.Key), input)
+	fmt.Println(topupData)
+	fmt.Println(topupData.Gram)
+	repository(string(mes.Key), topupData)
 }
 
-func repository(reff_id string, input InputHargaEmas) {
+func repository(reff_id string, input TopupModel) {
 	host := os.Getenv("db-host")
 	port := os.Getenv("db-port")
 	user := os.Getenv("db-user")
@@ -76,16 +77,12 @@ func repository(reff_id string, input InputHargaEmas) {
 	}
 	defer db.Close()
 
-	sqlStatement := `INSERT INTO tbl_harga 
-	(id, admin_id, harga_topup, harga_buyback, created_date) values
-	($1, $2, $3, $4, NOW())
-	RETURNING id;`
-
-	var id string
-	err = db.QueryRow(sqlStatement, reff_id, input.Admin_id, input.Harga_topup, input.Harga_buyback).Scan(&id)
-	if err != nil {
-		log.Fatalf("error when execute : %s", err)
+	sqlStatement := `CALL sp_customer_topup($1,$2,$3,$4)`
+	// _, errExec := db.Query(sqlStatement, "1234qwer", 0.2, 800000, "234r")
+	// _, errExec := db.Query(sqlStatement, reff_id, input.Gram, input.Harga, input.Norek)
+	_, errExec := db.Exec(sqlStatement, reff_id, input.Gram, input.Harga, input.Norek)
+	if errExec != nil {
+		log.Fatalf("error when execute : %s", errExec)
 	}
-	fmt.Println("Success insert with id :", id)
-
+	fmt.Println("Success insert with id :", reff_id)
 }

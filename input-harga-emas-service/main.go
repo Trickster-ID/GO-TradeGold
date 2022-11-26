@@ -16,8 +16,8 @@ import (
 
 type InputHargaEmas struct {
 	Admin_id      string  `json:"admin_id,omitempty"`
-	Harga_topup   float32 `json:"harga_topup"`
-	Harga_buyback float32 `json:"harga_buyback"`
+	Harga_topup   float64 `json:"harga_topup"`
+	Harga_buyback float64 `json:"harga_buyback"`
 }
 type Success struct {
 	Error   bool   `json:"error"`

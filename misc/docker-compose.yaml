@@ -15,8 +15,6 @@ services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
-    depends_on:
-      - postgres
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -38,13 +36,13 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-  kafka_manager:
-    image: hlebalbau/kafka-manager:stable
-    container_name: kakfa-manager
-    restart: always
-    ports:
-      - "9000:9000"
-    environment:
-      ZK_HOSTS: "zookeeper:2181"
-      APPLICATION_SECRET: "random-secret"
-      command: -Dpidfile. .path=/dev/null
+  # kafka_manager:
+  #   image: hlebalbau/kafka-manager:stable
+  #   container_name: kakfa-manager
+  #   restart: always
+  #   ports:
+  #     - "9000:9000"
+  #   environment:
+  #     ZK_HOSTS: "zookeeper:2181"
+  #     APPLICATION_SECRET: "random-secret"
+  #     command: -Dpidfile. .path=/dev/null
