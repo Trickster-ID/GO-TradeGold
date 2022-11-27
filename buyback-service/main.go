@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -18,12 +17,7 @@ import (
 	"github.com/teris-io/shortid"
 )
 
-type TopupPayload struct {
-	Gram  string `json:"gram"`
-	Harga string `json:"harga"`
-	Norek string `json:"norek"`
-}
-type TopupModel struct {
+type BuybackModel struct {
 	Gram  float64 `json:"gram"`
 	Harga float64 `json:"harga"`
 	Norek string  `json:"norek"`
@@ -45,17 +39,17 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/topup", controller).Methods("POST")
+	r.HandleFunc("/api/buyback", controller).Methods("POST")
 	fmt.Println("application is listening...")
 	http.ListenAndServe(":"+os.Getenv("port"), r)
 }
 
 func controller(writer http.ResponseWriter, request *http.Request) {
-	var topupData TopupPayload
+	var buybackData BuybackModel
 	writer.Header().Add("content-type", "application/json")
-	json.NewDecoder(request.Body).Decode(&topupData)
-	//reff_id, err := repository(topupData)
-	reff_id, err := service(topupData)
+	json.NewDecoder(request.Body).Decode(&buybackData)
+	//reff_id, err := repository(buybackData)
+	reff_id, err := service(buybackData)
 	if err != nil {
 		res := Error{
 			Error:   true,
@@ -73,30 +67,25 @@ func controller(writer http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(writer).Encode(res)
 }
 
-func service(topupPayload TopupPayload) (string, error) {
+func service(buyback BuybackModel) (string, error) {
 	newid, _ := shortid.Generate()
-	var topupModel TopupModel
-	//try to parse to float
-	gramFloat, errConvGram := strconv.ParseFloat(topupPayload.Gram, 64)
-	if errConvGram != nil {
-		return newid, errConvGram
+	//validate norek and saldo
+	saldo, errValNorek := validateNorek(buyback.Norek)
+	if errValNorek != nil {
+		return newid, errors.New("error Validate Norek : " + errValNorek.Error())
 	}
-	topupModel.Gram = gramFloat
-	//try to parse to float
-	hargaFloat, errConvHarga := strconv.ParseFloat(topupPayload.Harga, 64)
-	if errConvHarga != nil {
-		return newid, errConvHarga
+	if saldo < buyback.Gram {
+		return newid, errors.New("buyback value more than saldo")
 	}
-	topupModel.Harga = hargaFloat
-	topupModel.Norek = topupPayload.Norek
-	//validate minimal topup
-	if gramFloat < 0.001 {
-		return newid, errors.New("0.001 is minimal to topup")
+
+	//validate minimal buyback
+	if buyback.Gram < 0.001 {
+		return newid, errors.New("0.001 is minimal to buyback")
 	}
 	//validate multiple of 0.001
 	comma := false
 	counter := 0
-	for _, v := range topupPayload.Gram {
+	for _, v := range fmt.Sprintf("%v", buyback.Gram) {
 		sub := fmt.Sprintf("%c", v)
 		if comma {
 			counter++
@@ -105,26 +94,26 @@ func service(topupPayload TopupPayload) (string, error) {
 			comma = true
 		}
 	}
-	if counter > 3 {
-		return newid, errors.New("minimal topup is multiple of 0.001")
+	if comma && counter > 3 {
+		return newid, errors.New("minimal buyback is multiple of 0.001")
 	}
-	//validate harga topup
-	hargaTopup, errVal := validateHarga()
+	//validate harga buyback
+	hargaBuyback, errVal := validateHarga()
 	if errVal != nil {
 		return newid, errVal
 	}
-	if topupModel.Harga != hargaTopup {
-		return newid, errors.New("harga is not match by topup harga")
+	if buyback.Harga != hargaBuyback {
+		return newid, errors.New("harga is not match by buyback harga")
 	}
 
-	err := repository(newid, topupModel)
+	err := repository(newid, buyback)
 	if err != nil {
 		return newid, err
 	}
 	return newid, nil
 }
 
-func repository(reff_id string, topupModel TopupModel) error {
+func repository(reff_id string, buybackModel BuybackModel) error {
 	kafkaAddress := os.Getenv("kafkaAddress")
 	kafkaTopic := os.Getenv("kafkaTopic")
 
@@ -134,7 +123,7 @@ func repository(reff_id string, topupModel TopupModel) error {
 		Balancer: &kafka.LeastBytes{},
 	}
 
-	res, _ := json.Marshal(topupModel)
+	res, _ := json.Marshal(buybackModel)
 	err := w.WriteMessages(context.Background(),
 		kafka.Message{
 			Key:   []byte(reff_id),
@@ -155,28 +144,44 @@ func repository(reff_id string, topupModel TopupModel) error {
 }
 
 func validateHarga() (float64, error) {
+	db, err := dbConfig()
+	var hargaBuyback float64
+	if err != nil {
+		return hargaBuyback, err
+	}
+	defer db.Close()
+
+	sqlStatement := `SELECT harga_buyback FROM tbl_harga ORDER BY created_date DESC LIMIT 1;`
+	errExec := db.QueryRow(sqlStatement).Scan(&hargaBuyback)
+	if errExec != nil {
+		return hargaBuyback, errExec
+	}
+	return hargaBuyback, nil
+}
+
+func validateNorek(norek string) (float64, error) {
+	db, errDb := dbConfig()
+	if errDb != nil {
+		return 0, errDb
+	}
+	defer db.Close()
+	sqlStatement := `SELECT saldo FROM tbl_rekening WHERE norek = $1;`
+	var saldo float64
+	errExec := db.QueryRow(sqlStatement, norek).Scan(&saldo)
+	if errExec != nil {
+		return 0, errors.New("norek not exist")
+	}
+	return saldo, nil
+}
+
+func dbConfig() (*sql.DB, error) {
 	host := os.Getenv("db-host")
 	port := os.Getenv("db-port")
 	user := os.Getenv("db-user")
 	password := os.Getenv("db-pass")
 	dbname := os.Getenv("db-name")
-	var hargaTopup float64
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
-	db, err := sql.Open("postgres", psqlInfo)
-
-	if err != nil {
-		// log.Fatalf("Tidak Konek DB Errornya : %s", err)
-		return hargaTopup, err
-	}
-	defer db.Close()
-
-	sqlStatement := `SELECT harga_topup FROM tbl_harga ORDER BY created_date DESC LIMIT 1;`
-	errExec := db.QueryRow(sqlStatement).Scan(&hargaTopup)
-	if errExec != nil {
-		// log.Fatalf("error when execute : %s", errExec)
-		return hargaTopup, errExec
-	}
-	return hargaTopup, nil
+	return sql.Open("postgres", psqlInfo)
 }

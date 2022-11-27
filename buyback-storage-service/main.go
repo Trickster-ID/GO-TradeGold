@@ -13,7 +13,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type TopupModel struct {
+type BuybackModel struct {
 	Gram  float64 `json:"gram"`
 	Harga float64 `json:"harga"`
 	Norek string  `json:"norek"`
@@ -49,19 +49,19 @@ func main() {
 }
 
 func controller(mes kafka.Message) {
-	var topupData TopupModel
+	var buybackData BuybackModel
 
-	err := json.Unmarshal([]byte(mes.Value), &topupData)
+	err := json.Unmarshal([]byte(mes.Value), &buybackData)
 	if err != nil {
 		log.Fatal("error when unmarshal:", err)
 	}
 	fmt.Print("struct after : ")
-	fmt.Println(topupData)
-	fmt.Println(topupData.Gram)
-	repository(string(mes.Key), topupData)
+	fmt.Println(buybackData)
+	fmt.Println(buybackData.Gram)
+	repository(string(mes.Key), buybackData)
 }
 
-func repository(reff_id string, input TopupModel) {
+func repository(reff_id string, input BuybackModel) {
 	host := os.Getenv("db-host")
 	port := os.Getenv("db-port")
 	user := os.Getenv("db-user")
@@ -77,7 +77,7 @@ func repository(reff_id string, input TopupModel) {
 	}
 	defer db.Close()
 
-	sqlStatement := `CALL sp_customer_topup($1,$2,$3)`
+	sqlStatement := `CALL sp_buyback($1,$2,$3)`
 	// _, errExec := db.Query(sqlStatement, "1234qwer", 0.2, 800000, "234r")
 	// _, errExec := db.Query(sqlStatement, reff_id, input.Gram, input.Harga, input.Norek)
 	_, errExec := db.Exec(sqlStatement, reff_id, input.Gram, input.Norek)
