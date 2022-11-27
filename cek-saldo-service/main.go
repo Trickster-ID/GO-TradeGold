@@ -71,14 +71,12 @@ func repository(norek string) (ResponseModel, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		//log.Fatalf("Tidak Konek DB Errornya : %s", err)
 		return saldo, err
 	}
 	defer db.Close()
 	sqlStatement := "SELECT norek, saldo FROM tbl_rekening WHERE norek = $1 ORDER BY created_date DESC LIMIT 1;"
 	errExec := db.QueryRow(sqlStatement, norek).Scan(&saldo.Norek, &saldo.Saldo)
 	if errExec != nil {
-		//log.Fatalf("error when execute : %s", errExec)
 		return saldo, errExec
 	}
 	return saldo, nil

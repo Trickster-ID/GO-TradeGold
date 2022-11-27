@@ -66,14 +66,12 @@ func repository() (HargaEmas, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		//log.Fatalf("Tidak Konek DB Errornya : %s", err)
 		return hargaEmas, err
 	}
 	defer db.Close()
 	sqlStatement := "SELECT harga_topup, harga_buyback FROM tbl_harga ORDER BY created_date DESC LIMIT 1;"
 	errExec := db.QueryRow(sqlStatement).Scan(&hargaEmas.Harga_topup, &hargaEmas.Harga_buyback)
 	if errExec != nil {
-		//log.Fatalf("error when execute : %s", errExec)
 		return hargaEmas, errExec
 	}
 	return hargaEmas, nil

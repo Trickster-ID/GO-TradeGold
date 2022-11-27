@@ -48,7 +48,6 @@ func controller(writer http.ResponseWriter, request *http.Request) {
 	var buybackData BuybackModel
 	writer.Header().Add("content-type", "application/json")
 	json.NewDecoder(request.Body).Decode(&buybackData)
-	//reff_id, err := repository(buybackData)
 	reff_id, err := service(buybackData)
 	if err != nil {
 		res := Error{

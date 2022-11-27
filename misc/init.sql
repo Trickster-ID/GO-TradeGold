@@ -8,8 +8,7 @@ create table IF NOT EXISTS tbl_harga(
 );
 
 create table IF NOT EXISTS tbl_rekening(
-    id varchar(11) PRIMARY KEY,
-    norek varchar(4),
+    norek varchar(4) PRIMARY KEY,
     saldo NUMERIC,
     created_date TIMESTAMP,
     update_date TIMESTAMP
@@ -53,7 +52,7 @@ BEGIN
         FROM tbl_harga ORDER BY created_date DESC LIMIT 1;
     ELSE
         INSERT INTO tbl_rekening VALUES
-        (Pid, Pnorek, Pgram, CURRENT_TIMESTAMP);
+        (Pnorek, Pgram, CURRENT_TIMESTAMP);
 
         INSERT INTO tbl_topup 
         SELECT Pid,Pgram,harga_topup, harga_buyback,Pnorek,Pgram,CURRENT_TIMESTAMP 

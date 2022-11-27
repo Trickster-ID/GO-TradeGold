@@ -78,8 +78,6 @@ func repository(reff_id string, input TopupModel) {
 	defer db.Close()
 
 	sqlStatement := `CALL sp_customer_topup($1,$2,$3)`
-	// _, errExec := db.Query(sqlStatement, "1234qwer", 0.2, 800000, "234r")
-	// _, errExec := db.Query(sqlStatement, reff_id, input.Gram, input.Harga, input.Norek)
 	_, errExec := db.Exec(sqlStatement, reff_id, input.Gram, input.Norek)
 	if errExec != nil {
 		log.Fatalf("error when execute : %s", errExec)

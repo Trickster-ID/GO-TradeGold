@@ -54,7 +54,6 @@ func controller(writer http.ResponseWriter, request *http.Request) {
 	var topupData TopupPayload
 	writer.Header().Add("content-type", "application/json")
 	json.NewDecoder(request.Body).Decode(&topupData)
-	//reff_id, err := repository(topupData)
 	reff_id, err := service(topupData)
 	if err != nil {
 		res := Error{
@@ -167,7 +166,6 @@ func validateHarga() (float64, error) {
 	db, err := sql.Open("postgres", psqlInfo)
 
 	if err != nil {
-		// log.Fatalf("Tidak Konek DB Errornya : %s", err)
 		return hargaTopup, err
 	}
 	defer db.Close()
@@ -175,7 +173,6 @@ func validateHarga() (float64, error) {
 	sqlStatement := `SELECT harga_topup FROM tbl_harga ORDER BY created_date DESC LIMIT 1;`
 	errExec := db.QueryRow(sqlStatement).Scan(&hargaTopup)
 	if errExec != nil {
-		// log.Fatalf("error when execute : %s", errExec)
 		return hargaTopup, errExec
 	}
 	return hargaTopup, nil

@@ -78,7 +78,6 @@ func repository(reqMod RequestModel) ([]ResponseModel, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		//log.Fatalf("Tidak Konek DB Errornya : %s", err)
 		return saldo, err
 	}
 	defer db.Close()
@@ -91,7 +90,6 @@ func repository(reqMod RequestModel) ([]ResponseModel, error) {
 	WHERE norek = $1 and (date >= $2 and date <= $3 )`
 	rows, errExec := db.Query(sqlStatement, reqMod.Norek, reqMod.Start_date, reqMod.End_date)
 	if errExec != nil {
-		//log.Fatalf("error when execute : %s", errExec)
 		return saldo, errExec
 	}
 	for rows.Next() {
